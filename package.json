@@ -1,0 +1,10 @@
+{
+  "name": "chatgpt-upi-bypass",
+  "version": "1.0.0",
+  "description": "ChatGPT UPI QR Generator",
+  "type": "module",
+  "main": "api/generate.js",
+  "engines": {
+    "node": "18.x"
+  }
+}
