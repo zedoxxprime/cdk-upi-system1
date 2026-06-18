@@ -1,0 +1,19 @@
+{
+  "name": "zedox-upi-generator",
+  "version": "3.0.0",
+  "description": "Zedox - ChatGPT Plus UPI QR Generator with Stripe Integration",
+  "main": "index.html",
+  "scripts": {
+    "start": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["chatgpt", "upi", "stripe", "qr-generator"],
+  "author": "Zedox",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  }
+}
