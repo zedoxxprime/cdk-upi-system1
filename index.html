@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zedox - ChatGPT Plus QR Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:Arial,sans-serif;
+  background:#0a0a0f;
+  color:#fff;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+.container{
+  background:#111118;
+  border:1px solid #252535;
+  border-radius:16px;
+  padding:30px;
+  max-width:500px;
+  width:100%;
+}
+h1{
+  font-size:24px;
+  margin-bottom:8px;
+  background:linear-gradient(135deg,#6c5ce7,#00d4aa);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.subtitle{
+  color:#9898b0;
+  font-size:13px;
+  margin-bottom:24px;
+}
+label{
+  display:block;
+  color:#9898b0;
+  font-size:12px;
+  font-weight:bold;
+  margin:12px 0 6px;
+}
+textarea,input{
+  width:100%;
+  padding:12px;
+  background:#0a0a0f;
+  border:1px solid #252535;
+  color:#fff;
+  border-radius:10px;
+  font-family:monospace;
+  font-size:13px;
+  outline:none;
+}
+textarea{height:150px;resize:vertical}
+textarea:focus,input:focus{border-color:#6c5ce7}
+.btn{
+  width:100%;
+  padding:14px;
+  margin-top:16px;
+  border:0;
+  border-radius:10px;
+  background:linear-gradient(135deg,#6c5ce7,#00d4aa);
+  color:#fff;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
+}
+.btn:hover{opacity:0.9;transform:translateY(-1px)}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.status{
+  margin-top:12px;
+  padding:12px;
+  border-radius:10px;
+  font-size:13px;
+  display:none;
+}
+.status.show{display:block}
+.status.info{background:rgba(108,92,231,0.1);color:#a29bfe;border:1px solid rgba(108,92,231,0.3)}
+.status.ok{background:rgba(0,212,170,0.1);color:#00d4aa;border:1px solid rgba(0,212,170,0.3)}
+.status.err{background:rgba(255,71,87,0.1);color:#ff4757;border:1px solid rgba(255,71,87,0.3)}
+.qr-section{
+  margin-top:20px;
+  text-align:center;
+  display:none;
+}
+.qr-section.show{display:block}
+.qr-box{
+  background:#fff;
+  display:inline-block;
+  padding:15px;
+  border-radius:15px;
+  margin:15px 0;
+}
+.qr-box img{display:block;width:250px;height:250px}
+.hint{color:#9898b0;font-size:12px;margin:10px 0}
+.url-box{
+  background:#0a0a0f;
+  border:1px solid #252535;
+  border-radius:10px;
+  padding:10px;
+  word-break:break-all;
+  font-family:monospace;
+  font-size:11px;
+  color:#00d4aa;
+  margin:10px 0;
+}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.act-btn{
+  padding:8px 16px;
+  background:#1a1a25;
+  border:1px solid #252535;
+  color:#fff;
+  border-radius:20px;
+  cursor:pointer;
+  font-size:12px;
+  transition:0.2s;
+}
+.act-btn:hover{background:#252535;border-color:#6c5ce7}
+.spinner{
+  display:inline-block;
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin 0.6s linear infinite;
+  vertical-align:middle;
+  margin-right:8px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⚡ Zedox UPI QR</h1>
+  <p class="subtitle">ChatGPT Plus · ₹0 Free Trial · Stripe UPI</p>
+
+  <label>ChatGPT Session JSON</label>
+  <textarea id="sessionInput" placeholder='Paste your session JSON here from: https://chatgpt.com/api/auth/session'></textarea>
+
+  <button class="btn" id="genBtn" onclick="generate()">💳 Generate Stripe UPI QR — ₹0</button>
+
+  <div class="status" id="status"></div>
+
+  <div class="qr-section" id="qrSection">
+    <h3 style="margin-bottom:5px">📱 Stripe UPI QR</h3>
+    <div class="qr-box" id="qrContainer"></div>
+    <p class="hint">Scan with Google Pay / PhonePe / Paytm → Pay ₹0</p>
+    <div class="url-box" id="urlDisplay"></div>
+    <div class="actions">
+      <button class="act-btn" onclick="copyURL()">📋 Copy Link</button>
+      <button class="act-btn" onclick="openURL()">🌐 Open Stripe</button>
+      <button class="act-btn" onclick="downloadQR()">📥 Download QR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let stripeURL = '';
+let qrInstance = null;
+
+function showStatus(msg, type) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = 'status show ' + type;
+}
+
+async function generate() {
+  const raw = document.getElementById('sessionInput').value.trim();
+  
+  if (!raw) {
+    showStatus('❌ Paste your session JSON first', 'err');
+    return;
+  }
+
+  let sessionData;
+  try {
+    sessionData = JSON.parse(raw);
+  } catch(e) {
+    showStatus('❌ Invalid JSON. Make sure you copy the ENTIRE page from chatgpt.com/api/auth/session', 'err');
+    return;
+  }
+
+  const accessToken = sessionData.accessToken;
+  if (!accessToken) {
+    showStatus('❌ No accessToken found in session JSON', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating...';
+  showStatus('⏳ Contacting ChatGPT API for Stripe UPI checkout...', 'info');
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: accessToken })
+    });
+
+    console.log('Response status:', res.status);
+    
+    // Get raw text first
+    const rawText = await res.text();
+    console.log('Raw response:', rawText.substring(0, 300));
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch(e) {
+      console.error('JSON parse error:', e);
+      showStatus('❌ Server returned invalid response. Raw: ' + rawText.substring(0, 200), 'err');
+      btn.disabled = false;
+      btn.innerHTML = '💳 Generate Stripe UPI QR — ₹0';
+      return;
+    }
+
+    console.log('Parsed data:', data);
+
+    if (!data.success) {
+      showStatus('❌ ' + (data.error || 'Failed to generate URL'), 'err');
+      btn.disabled = false;
+      btn.innerHTML = '💳 Generate Stripe UPI QR — ₹0';
+      return;
+    }
+
+    stripeURL = data.url || data.checkoutUrl || data.stripeUrl;
+
+    if (!stripeURL) {
+      showStatus('❌ No URL in response. Data: ' + JSON.stringify(data).substring(0, 200), 'err');
+      btn.disabled = false;
+      btn.innerHTML = '💳 Generate Stripe UPI QR — ₹0';
+      return;
+    }
+
+    // Show QR
+    document.getElementById('qrSection').classList.add('show');
+    document.getElementById('urlDisplay').textContent = stripeURL;
+
+    const container = document.getElementById('qrContainer');
+    container.innerHTML = '';
+    
+    qrInstance = new QRCode(container, {
+      text: stripeURL,
+      width: 250,
+      height: 250,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    showStatus('✅ Stripe UPI QR ready! Scan to pay ₹0', 'ok');
+
+  } catch(err) {
+    console.error('Fetch error:', err);
+    showStatus('❌ Network error: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💳 Generate Stripe UPI QR — ₹0';
+  }
+}
+
+function copyURL() {
+  if (!stripeURL) return;
+  navigator.clipboard.writeText(stripeURL).then(() => {
+    alert('✅ URL copied!');
+  });
+}
+
+function openURL() {
+  if (!stripeURL) return;
+  window.open(stripeURL, '_blank');
+}
+
+function downloadQR() {
+  const img = document.querySelector('#qrContainer img');
+  if (!img) return;
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = 'zedox-stripe-upi-qr.png';
+  a.click();
+}
+</script>
+</body>
+</html>
